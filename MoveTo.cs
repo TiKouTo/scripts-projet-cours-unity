@@ -248,6 +248,12 @@
                   // else nm_agent.destination = ((attraction)list_targets[actual_target]).point_d_interet.position;
                }
                else nm_agent.destination = ((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue].my_position + offset_position;
+
+               if(f_arrived(nm_agent.destination))
+               {
+                  agent_007_au_rapport.my_position = transform.position;
+                  ((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue + 1] = agent_007_au_rapport;
+               }
             }
          }
          else
