@@ -160,8 +160,18 @@
          StartCoroutine(Coroutine_have_fun());
       }
 
+      Vector3 get_offset_position(Vector3 target_position)
+      {
+         float distance = 10f; // nm_agent.radius;
+         Vector3 direction = transform.position - target_position;
+         Vector3 normalized_direction = Vector3.Normalize(direction);
+         Vector3 offset = new Vector3(normalized_direction.x*distance, normalized_direction.y*distance, normalized_direction.z*distance);
+         return offset;
+      }
+
       void handle_attraction_and_queue()
       {
+         Vector3 offset = new Vector3(0,0,0);
          am_I_arrive_point_d_interet = false;
          nm_agent.isStopped = false;
          if(!doing_the_attraction)
@@ -194,7 +204,8 @@
                else
                {
                   agent_007_au_rapport.celui_avant_moi_dans_la_queue = ((attraction)list_targets[actual_target]).list_d_attente[((attraction)list_targets[actual_target]).list_d_attente.Count-1];
-                  nm_agent.destination = agent_007_au_rapport.celui_avant_moi_dans_la_queue.my_position + offset_position;
+                  offset = get_offset_position(agent_007_au_rapport.celui_avant_moi_dans_la_queue.my_position);
+                  nm_agent.destination = agent_007_au_rapport.celui_avant_moi_dans_la_queue.my_position + offset;
                   if(f_arrived(nm_agent.destination))
                   {
                      am_I_arrive_point_d_interet = true;
@@ -247,11 +258,14 @@
                   // }
                   // else nm_agent.destination = ((attraction)list_targets[actual_target]).point_d_interet.position;
                }
-               else nm_agent.destination = ((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue].my_position + offset_position;
-
+               else 
+               {
+                  offset = get_offset_position(((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue].my_position);
+                  nm_agent.destination = ((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue].my_position + offset;
+               }
                if(f_arrived(nm_agent.destination)  && ((attraction)list_targets[actual_target]).list_d_attente.Count >1)
                {
-                  Debug.Log(((attraction)list_targets[actual_target]).list_d_attente.Count);
+                  //Debug.Log(((attraction)list_targets[actual_target]).list_d_attente.Count);
                   agent_007_au_rapport.my_position = transform.position;
                   ((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue + 1] = agent_007_au_rapport;
                }
