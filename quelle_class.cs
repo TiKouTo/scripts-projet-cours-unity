@@ -5,10 +5,16 @@ using UnityEngine;
 [System.Serializable]
 public class attraction : ScriptableObject
 {
-    public bool is_someone_doing_it;// est ce que quelqu'un est en train de faire le parc d'attraction
+    public bool is_at_maximum_capacity;// est ce que quelqu'un est en train de faire le parc d'attraction
     public List<agent_secret> list_d_attente; // liste de tout les agents secrets qui attendent pour faire l'attraction
     public Transform point_d_interet;
     public int numero_participant;
+    public float visit_time;
+    public Vector3 entrance;
+    public Vector3 exit;
+    public int maximum_simultaneous_visitors;
+    public int actual_simultaneous_visitors;
+    public string activity;
 }
 
 [System.Serializable]

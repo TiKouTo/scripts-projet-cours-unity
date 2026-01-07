@@ -175,7 +175,7 @@
                   if(f_arrived(((attraction)list_targets[actual_target]).point_d_interet.position))
                   {
                      am_I_arrive_point_d_interet = true;
-                     if(((attraction)list_targets[actual_target]).is_someone_doing_it)
+                     if(((attraction)list_targets[actual_target]).is_at_maximum_capacity)
                      {
                         I_am_next = true;
                         //my_turn = true;
@@ -187,7 +187,7 @@
                      else 
                      {
                         doing_the_attraction = true;
-                        ((attraction)list_targets[actual_target]).is_someone_doing_it = true; 
+                        ((attraction)list_targets[actual_target]).is_at_maximum_capacity = true; 
                         ((attraction)list_targets[actual_target]).numero_participant++;
                      }
                   }
@@ -241,12 +241,12 @@
                         when_arrived_actualise_position_once = true;
                      }
                      am_I_arrive_point_d_interet = true;
-                     if(!((attraction)list_targets[actual_target]).is_someone_doing_it) 
+                     if(!((attraction)list_targets[actual_target]).is_at_maximum_capacity) 
                      {
                         agent_007_au_rapport.is_in_queue = false;
                         ((attraction)list_targets[actual_target]).list_d_attente.RemoveAt(0);
                         doing_the_attraction = true;
-                        ((attraction)list_targets[actual_target]).is_someone_doing_it = true; 
+                        ((attraction)list_targets[actual_target]).is_at_maximum_capacity = true; 
                         ((attraction)list_targets[actual_target]).numero_participant++;
                      }
                      else nm_agent.isStopped = true;
@@ -280,7 +280,7 @@
          {
             attraction_just_done = false;
             doing_the_attraction = false;
-            ((attraction)list_targets[actual_target]).is_someone_doing_it = false;
+            ((attraction)list_targets[actual_target]).is_at_maximum_capacity = false;
             agent_007_au_rapport.is_in_queue = false;
             I_am_next = false;
             // my_turn = false;

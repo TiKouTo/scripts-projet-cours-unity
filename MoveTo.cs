@@ -28,7 +28,45 @@
       public bool search_target;
       public Vector3 where_I_stopped;
       public Vector3 offset_position;
+      private Vector3 new_destination;
+      private int new_space_awareness;
+      public int close_to_space_awareness;
+      public int far_from_space_awareness;
+      public float last_time_destination_was_set;
 
+
+      void go_to(Vector3 destination, int space_awareness) // se charge de diminuer la charge de la pile de trouver un chemin tout en s'assurant que l'agent aille bien ou il doit aller
+      {
+         if(Vector3.Distance(new_destination, nm_agent.destination) > distance_to_reach && Vector3.Distance(transform.position, nm_agent.destination) < distance_to_reach * space_awareness) //quand l'agent se déplace,il ne réfléchit à l'exactitude de sa destination que lorsqu'il en est proche
+         {
+            nm_agent.destination = destination;
+            last_time_destination_was_set = Time.time;
+         }
+
+         new_destination = destination;
+         new_space_awareness = space_awareness;
+
+      }
+
+
+      void keep_in_check_go_to() //s'assure que la destination mise de côté par go_to est bien utilisée après un certain temps
+      {
+         if(new_space_awareness == 0)
+            return;
+         if(Vector3.Distance(new_destination, nm_agent.destination) > distance_to_reach && (Vector3.Distance(transform.position, nm_agent.destination) < distance_to_reach * new_space_awareness))
+         {
+            nm_agent.destination = new_destination;
+            last_time_destination_was_set = Time.time;
+         }
+
+         //pour éviter un problème qui apparaissait dans les queues lorsqu'il y avait trop d'espace entre les gens 
+         float time_since_destination_was_set = Time.time - last_time_destination_was_set;
+         if(agent_007_au_rapport.is_in_queue && time_since_destination_was_set > 0.5f )
+         {
+            agent_007_au_rapport.my_position = transform.position;
+            ((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue] = agent_007_au_rapport;
+         }
+      }
 
       IEnumerator Coroutine_random_new_target()
       {
@@ -39,7 +77,7 @@
 
       IEnumerator Coroutine_have_fun()
       {
-         yield return new WaitForSeconds(5);
+         yield return new WaitForSeconds(((attraction)list_targets[actual_target]).visit_time);
          attraction_just_done = true;
       } 
 
@@ -69,7 +107,7 @@
          }
          while(int_random_new_target == actual_target && list_targets.Count >= 2) int_random_new_target = Random.Range(0,list_targets.Count);
          actual_target = int_random_new_target;
-         //nm_agent.destination = ((attraction)list_targets[actual_target]).point_d_interet.position;
+         //nm_agent.destination = ((attraction)list_targets[actual_target]).entrance;
          //attraction_actuelle = list_targets[actual_target];
 
          nm_agent.isStopped = false;
@@ -92,6 +130,11 @@
          // my_turn = false;
          once = false;
          offset_position = new Vector3(0,0,10);
+         new_space_awareness = 0;
+         close_to_space_awareness = 20;
+         far_from_space_awareness = 100;
+         last_time_destination_was_set = 0;
+
 
          //set_up l'agent aux bonnes caractéritiques 
          nm_agent = GetComponent<NavMeshAgent>();
@@ -99,6 +142,7 @@
          nm_agent.speed = nm_agent.speed*5f*5f;
          nm_agent.radius = 0.5f;
          nm_agent.acceleration = nm_agent.acceleration*5f*5f;
+         
          nm_agent.stoppingDistance = distance_to_reach;
          nm_agent.isStopped = true;
          
@@ -117,7 +161,7 @@
          //StartCoroutine(Coroutine_random_new_target());
          //Debug.Log(list_targets.Count);
          
-         if (get_non_y_distance(((attraction)list_targets[actual_target]).point_d_interet.position) < distance_to_reach && reaching_target) //cas où les objets ne sont pas au même y
+         if (get_non_y_distance(((attraction)list_targets[actual_target]).entrance) < distance_to_reach && reaching_target) //cas où les objets ne sont pas au même y
          {
             nm_agent.isStopped = true;
             stopped_after_moving = true;
@@ -155,14 +199,19 @@
 
       void have_fun()
       {
-         Vector3 offset = new Vector3(20,0,0);
-         nm_agent.destination = ((attraction)list_targets[actual_target]).point_d_interet.position + offset;
+         ((attraction)list_targets[actual_target]).actual_simultaneous_visitors++;
+         if(((attraction)list_targets[actual_target]).actual_simultaneous_visitors >= ((attraction)list_targets[actual_target]).maximum_simultaneous_visitors)
+            ((attraction)list_targets[actual_target]).is_at_maximum_capacity = true;
+         if(((attraction)list_targets[actual_target]).actual_simultaneous_visitors > ((attraction)list_targets[actual_target]).maximum_simultaneous_visitors)
+            Debug.Log("too much people in the attraction");
+         go_to(((attraction)list_targets[actual_target]).exit, close_to_space_awareness);
+         //nm_agent.destination = ((attraction)list_targets[actual_target]).exit;
          StartCoroutine(Coroutine_have_fun());
       }
 
       Vector3 get_offset_position(Vector3 target_position)
       {
-         float distance = 10f; // nm_agent.radius;
+         float distance = nm_agent.radius*transform.localScale.x*1.5f*2;//
          Vector3 direction = transform.position - target_position;
          Vector3 normalized_direction = Vector3.Normalize(direction);
          Vector3 offset = new Vector3(normalized_direction.x*distance, normalized_direction.y*distance, normalized_direction.z*distance);
@@ -180,10 +229,10 @@
             {
                if(((attraction)list_targets[actual_target]).list_d_attente.Count == 0) 
                {
-                  if(f_arrived(((attraction)list_targets[actual_target]).point_d_interet.position))
+                  if(f_arrived(((attraction)list_targets[actual_target]).entrance))
                   {
                      am_I_arrive_point_d_interet = true;
-                     if(((attraction)list_targets[actual_target]).is_someone_doing_it)
+                     if(((attraction)list_targets[actual_target]).is_at_maximum_capacity)
                      {
                         I_am_next = true;
                         //my_turn = true;
@@ -195,17 +244,19 @@
                      else 
                      {
                         doing_the_attraction = true;
-                        ((attraction)list_targets[actual_target]).is_someone_doing_it = true; 
                         ((attraction)list_targets[actual_target]).numero_participant++;
                      }
                   }
-                  else nm_agent.destination = ((attraction)list_targets[actual_target]).point_d_interet.position;
+                  else go_to(((attraction)list_targets[actual_target]).entrance, far_from_space_awareness);
+                  //nm_agent.destination = ((attraction)list_targets[actual_target]).entrance;
                }
                else
                {
-                  agent_007_au_rapport.celui_avant_moi_dans_la_queue = ((attraction)list_targets[actual_target]).list_d_attente[((attraction)list_targets[actual_target]).list_d_attente.Count-1];
-                  offset = get_offset_position(agent_007_au_rapport.celui_avant_moi_dans_la_queue.my_position);
-                  nm_agent.destination = agent_007_au_rapport.celui_avant_moi_dans_la_queue.my_position + offset;
+                  //agent_007_au_rapport.celui_avant_moi_dans_la_queue = ((attraction)list_targets[actual_target]).list_d_attente[((attraction)list_targets[actual_target]).list_d_attente.Count-1];
+                  offset = get_offset_position(((attraction)list_targets[actual_target]).list_d_attente[((attraction)list_targets[actual_target]).list_d_attente.Count-1].my_position);
+                  //nm_agent.destination = agent_007_au_rapport.celui_avant_moi_dans_la_queue.my_position + offset;
+                  //go_to(agent_007_au_rapport.celui_avant_moi_dans_la_queue.my_position + offset, close_to_space_awareness);
+                  go_to(((attraction)list_targets[actual_target]).list_d_attente[((attraction)list_targets[actual_target]).list_d_attente.Count-1].my_position + offset, close_to_space_awareness);
                   if(f_arrived(nm_agent.destination))
                   {
                      am_I_arrive_point_d_interet = true;
@@ -231,7 +282,7 @@
                      // }
                      // else 
                      I_am_next = true;
-                     ((attraction)list_targets[actual_target]).list_d_attente[0] = agent_007_au_rapport;
+                     // ((attraction)list_targets[actual_target]).list_d_attente[0] = agent_007_au_rapport;
 
                   }
                   else i_celui_avant_moi_dans_la_queue--;
@@ -241,27 +292,28 @@
                {
                   // if(my_turn)
                   // {
-                  if(f_arrived(((attraction)list_targets[actual_target]).point_d_interet.position)) 
+                  if(f_arrived(((attraction)list_targets[actual_target]).entrance)) 
                   {
                      am_I_arrive_point_d_interet = true;
-                     if(!((attraction)list_targets[actual_target]).is_someone_doing_it) 
+                     if(!((attraction)list_targets[actual_target]).is_at_maximum_capacity) 
                      {
                         agent_007_au_rapport.is_in_queue = false;
                         ((attraction)list_targets[actual_target]).list_d_attente.RemoveAt(0);
                         doing_the_attraction = true;
-                        ((attraction)list_targets[actual_target]).is_someone_doing_it = true; 
                         ((attraction)list_targets[actual_target]).numero_participant++;
                      }
                      else nm_agent.isStopped = true;
                   }
-                  else nm_agent.destination = ((attraction)list_targets[actual_target]).point_d_interet.position;
+                  else go_to(((attraction)list_targets[actual_target]).entrance, far_from_space_awareness);
+                  //nm_agent.destination = ((attraction)list_targets[actual_target]).entrance;
                   // }
-                  // else nm_agent.destination = ((attraction)list_targets[actual_target]).point_d_interet.position;
+                  // else nm_agent.destination = ((attraction)list_targets[actual_target]).entrance;
                }
                else 
                {
                   offset = get_offset_position(((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue].my_position);
-                  nm_agent.destination = ((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue].my_position + offset;
+                  go_to(((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue].my_position + offset, close_to_space_awareness);
+                  //nm_agent.destination = ((attraction)list_targets[actual_target]).list_d_attente[i_celui_avant_moi_dans_la_queue].my_position + offset;
                }
                if(f_arrived(nm_agent.destination)  && ((attraction)list_targets[actual_target]).list_d_attente.Count >1)
                {
@@ -284,7 +336,9 @@
          {
             attraction_just_done = false;
             doing_the_attraction = false;
-            ((attraction)list_targets[actual_target]).is_someone_doing_it = false;
+            ((attraction)list_targets[actual_target]).actual_simultaneous_visitors--;
+            if(((attraction)list_targets[actual_target]).actual_simultaneous_visitors < ((attraction)list_targets[actual_target]).maximum_simultaneous_visitors)
+               ((attraction)list_targets[actual_target]).is_at_maximum_capacity = false;
             agent_007_au_rapport.is_in_queue = false;
             I_am_next = false;
             // my_turn = false;
@@ -303,5 +357,7 @@
          }
 
          am_I_in_queue = agent_007_au_rapport.is_in_queue;
+
+         keep_in_check_go_to();
       }
     }
