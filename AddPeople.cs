@@ -29,25 +29,31 @@ public class AddPeople : MonoBehaviour
         return a*x+b;
     }
 
-    void Start()
+    void make_POIs()
     {
-        NavMesh.avoidancePredictionTime = NavMesh.avoidancePredictionTime*2;
         list_007 = new List<agent_secret>();
         list_targets = new List<ScriptableObject>();
         for(int i=0 ; i<list_targets_transform.Count ; i++)
         {
-            // attraction new_attraction = new attraction();
-            // new_attraction.point_d_interet = list_targets_transform[i];
-            // new_attraction.is_someone_doing_it = false;
-            // new_attraction.list_d_attente = new List<agent_secret>();
             ScriptableObject new_attraction_instance = ScriptableObject.CreateInstance("attraction");
             ((attraction)new_attraction_instance).point_d_interet = list_targets_transform[i];
-            ((attraction)new_attraction_instance).is_someone_doing_it = false;
+            ((attraction)new_attraction_instance).is_at_maximum_capacity = false;
             ((attraction)new_attraction_instance).list_d_attente = new List<agent_secret>();
             ((attraction)new_attraction_instance).numero_participant = 0;
+            ((attraction)new_attraction_instance).visit_time = 5f;
+            ((attraction)new_attraction_instance).entrance = ((attraction)new_attraction_instance).point_d_interet.position;
+            ((attraction)new_attraction_instance).exit = new Vector3(((attraction)new_attraction_instance).entrance.x + 100f, ((attraction)new_attraction_instance).entrance.y, ((attraction)new_attraction_instance).entrance.z);
+            ((attraction)new_attraction_instance).maximum_simultaneous_visitors = 3;
+            ((attraction)new_attraction_instance).actual_simultaneous_visitors = 0;
+            ((attraction)new_attraction_instance).activity = "go_to_exit";
             list_targets.Add(new_attraction_instance);
-
         }
+    }
+
+    void Start()
+    {
+        NavMesh.avoidancePredictionTime = NavMesh.avoidancePredictionTime*2;
+        make_POIs();
     }
     public void Click()// créer nb_people_to_add agent_secrets aux positions aléatoirres
     {
